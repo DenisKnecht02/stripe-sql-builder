@@ -62,6 +62,23 @@ func NewQuery(options ...Option) StripeQuery {
 
 }
 
+func NewStringQuery(options ...Option) string {
+
+	query := StripeQuery{
+		Active: Bool(true),
+		Custom: &map[string]interface{}{
+			"active": true,
+		},
+	}
+
+	for _, option := range options {
+		query = option(query)
+	}
+
+	return query.ToString()
+
+}
+
 func WithActive(active bool) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Active = &active
