@@ -46,11 +46,15 @@ func (stripeQuery *StripeQuery) ToString() string {
 type Option func(StripeQuery) StripeQuery
 
 var defaultOptions []Option = []Option{
+	WithCustomRequired(),
+	WithMetadataRequired(),
 	WithActive(true),
 }
 
 func ResetDefaultQueryOptions() {
 	defaultOptions = []Option{
+		WithCustomRequired(),
+		WithMetadataRequired(),
 		WithActive(true),
 	}
 }
@@ -97,6 +101,34 @@ func NewStringQuery(options ...Option) string {
 
 	return query.ToString()
 
+}
+
+func WithCustomRequired() Option {
+	return func(stripeQuery StripeQuery) StripeQuery {
+		stripeQuery.Custom = &map[string]interface{}{}
+		return stripeQuery
+	}
+}
+
+func WithCustomNotRequired() Option {
+	return func(stripeQuery StripeQuery) StripeQuery {
+		stripeQuery.Custom = nil
+		return stripeQuery
+	}
+}
+
+func WithMetadataRequired() Option {
+	return func(stripeQuery StripeQuery) StripeQuery {
+		stripeQuery.Metadata = &map[string]string{}
+		return stripeQuery
+	}
+}
+
+func WithMetadataNotRequired() Option {
+	return func(stripeQuery StripeQuery) StripeQuery {
+		stripeQuery.Metadata = nil
+		return stripeQuery
+	}
 }
 
 func WithActive(active bool) Option {
