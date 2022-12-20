@@ -45,14 +45,39 @@ func (stripeQuery *StripeQuery) ToString() string {
 
 type Option func(StripeQuery) StripeQuery
 
+var defaultOptions []Option = []Option{
+	WithActive(true),
+}
+
+func ResetDefaultQueryOptions() {
+	defaultOptions = []Option{
+		WithActive(true),
+	}
+}
+
+func GetDefaultQueryOptions() []Option {
+	return defaultOptions
+}
+
+func SetDefaultQueryOptions(options ...Option) {
+	defaultOptions = options
+}
+
+func CreateDefaultQuery() StripeQuery {
+
+	var query StripeQuery
+
+	for _, option := range defaultOptions {
+		query = option(query)
+	}
+
+	return query
+
+}
+
 func NewQuery(options ...Option) StripeQuery {
 
-	query := StripeQuery{
-		Active: Bool(true),
-		Custom: &map[string]interface{}{
-			"active": true,
-		},
-	}
+	query := CreateDefaultQuery()
 
 	for _, option := range options {
 		query = option(query)
@@ -64,12 +89,7 @@ func NewQuery(options ...Option) StripeQuery {
 
 func NewStringQuery(options ...Option) string {
 
-	query := StripeQuery{
-		Active: Bool(true),
-		Custom: &map[string]interface{}{
-			"active": true,
-		},
-	}
+	query := CreateDefaultQuery()
 
 	for _, option := range options {
 		query = option(query)
