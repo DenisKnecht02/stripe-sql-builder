@@ -43,6 +43,8 @@ func (stripeQuery *StripeQuery) ToString() string {
 
 }
 
+type Option func(StripeQuery) StripeQuery
+
 func NewQuery(options ...Option) StripeQuery {
 
 	query := StripeQuery{
@@ -59,8 +61,6 @@ func NewQuery(options ...Option) StripeQuery {
 	return query
 
 }
-
-type Option func(StripeQuery) StripeQuery
 
 func WithActive(active bool) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {

@@ -1,3 +1,3 @@
-module stripe_query_builder
+module github.com/DenisKnecht02/stripe-sql-builder
 
 go 1.19
