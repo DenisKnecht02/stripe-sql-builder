@@ -81,14 +81,10 @@ func (stripeQuery *StripeQuery) ToString() string {
 
 type Option func(StripeQuery) StripeQuery
 
-var defaultOptions []Option = []Option{
-	WithActive(true),
-}
+var defaultOptions []Option = []Option{}
 
 func ResetDefaultQueryOptions() {
-	defaultOptions = []Option{
-		WithActive(true),
-	}
+	defaultOptions = []Option{}
 }
 
 func GetDefaultQueryOptions() []Option {
