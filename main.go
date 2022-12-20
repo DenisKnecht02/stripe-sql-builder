@@ -23,6 +23,42 @@ func (stripeQuery *StripeQuery) ToString() string {
 
 	var queries []string
 
+	if stripeQuery.ID != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%s'", "id", *stripeQuery.ID))
+	}
+
+	if stripeQuery.Active != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%t'", "active", *stripeQuery.Active))
+	}
+
+	if stripeQuery.Deleted != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%t'", "deleted", *stripeQuery.Deleted))
+	}
+
+	if stripeQuery.Shippable != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%t'", "shippable", *stripeQuery.Shippable))
+	}
+
+	if stripeQuery.Created != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%d'", "created", *stripeQuery.Created))
+	}
+
+	if stripeQuery.Description != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%s'", "description", *stripeQuery.Description))
+	}
+
+	if stripeQuery.Type != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%s'", "type", *stripeQuery.Type))
+	}
+
+	if stripeQuery.Currency != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%s'", "currency", *stripeQuery.Currency))
+	}
+
+	if stripeQuery.PriceId != nil {
+		queries = append(queries, fmt.Sprintf("%s:'%s'", "default_price.id", *stripeQuery.PriceId))
+	}
+
 	if stripeQuery.Metadata != nil {
 
 		for key, value := range *stripeQuery.Metadata {
@@ -46,15 +82,11 @@ func (stripeQuery *StripeQuery) ToString() string {
 type Option func(StripeQuery) StripeQuery
 
 var defaultOptions []Option = []Option{
-	WithCustomRequired(),
-	WithMetadataRequired(),
 	WithActive(true),
 }
 
 func ResetDefaultQueryOptions() {
 	defaultOptions = []Option{
-		WithCustomRequired(),
-		WithMetadataRequired(),
 		WithActive(true),
 	}
 }
@@ -103,38 +135,9 @@ func NewStringQuery(options ...Option) string {
 
 }
 
-func WithCustomRequired() Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Custom = &map[string]interface{}{}
-		return stripeQuery
-	}
-}
-
-func WithCustomNotRequired() Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Custom = nil
-		return stripeQuery
-	}
-}
-
-func WithMetadataRequired() Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Metadata = &map[string]string{}
-		return stripeQuery
-	}
-}
-
-func WithMetadataNotRequired() Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Metadata = nil
-		return stripeQuery
-	}
-}
-
 func WithActive(active bool) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Active = &active
-		(*stripeQuery.Custom)["active"] = active
 		return stripeQuery
 	}
 }
@@ -142,7 +145,6 @@ func WithActive(active bool) Option {
 func WithDeleted(deleted bool) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Deleted = &deleted
-		(*stripeQuery.Custom)["deleted"] = deleted
 		return stripeQuery
 	}
 }
@@ -150,7 +152,6 @@ func WithDeleted(deleted bool) Option {
 func WithShippable(shippable bool) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Shippable = &shippable
-		(*stripeQuery.Custom)["shippable"] = shippable
 		return stripeQuery
 	}
 }
@@ -158,7 +159,6 @@ func WithShippable(shippable bool) Option {
 func WithId(id string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.ID = &id
-		(*stripeQuery.Custom)["id"] = id
 		return stripeQuery
 	}
 }
@@ -166,7 +166,6 @@ func WithId(id string) Option {
 func WithPriceId(priceId string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.PriceId = &priceId
-		(*stripeQuery.Custom)["default_price.id"] = priceId
 		return stripeQuery
 	}
 }
@@ -174,7 +173,6 @@ func WithPriceId(priceId string) Option {
 func WithDescription(description string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Description = &description
-		(*stripeQuery.Custom)["description"] = description
 		return stripeQuery
 	}
 }
@@ -182,7 +180,6 @@ func WithDescription(description string) Option {
 func WithCreated(created int) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Created = &created
-		(*stripeQuery.Custom)["created"] = created
 		return stripeQuery
 	}
 }
@@ -190,7 +187,6 @@ func WithCreated(created int) Option {
 func WithType(t string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Type = &t
-		(*stripeQuery.Custom)["type"] = t
 		return stripeQuery
 	}
 }
@@ -198,7 +194,6 @@ func WithType(t string) Option {
 func WithCurrency(currency string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		stripeQuery.Currency = &currency
-		(*stripeQuery.Custom)["currency"] = currency
 		return stripeQuery
 	}
 }
@@ -233,6 +228,11 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 
 func WithCustom(key string, value string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
+
+		if stripeQuery.Custom == nil {
+			stripeQuery.Custom = &map[string]interface{}{}
+		}
+
 		(*stripeQuery.Custom)[key] = value
 		return stripeQuery
 	}
