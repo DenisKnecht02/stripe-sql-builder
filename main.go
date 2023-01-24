@@ -206,7 +206,7 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 	}
 }
 
-func With(key string, value string) Option {
+func With(key string, value interface{}) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
 
 		stripeQuery.Custom[key] = value
