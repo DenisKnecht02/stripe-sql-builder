@@ -13,7 +13,7 @@ type StripeQuery struct {
 
 type QueryCollection struct {
 	ConnectionType ConnectionType
-	Custom         map[string]interface{}
+	Custom         map[string]*[]interface{}
 	Metadata       *map[string]string
 	Entries        *[]QueryEntry[interface{}]
 	RawStrings     *[]string
@@ -45,7 +45,7 @@ func CreateDefaultCollection(connectionType ConnectionType) QueryCollection {
 
 	var collection QueryCollection
 	collection.ConnectionType = connectionType
-	collection.Custom = map[string]interface{}{}
+	collection.Custom = map[string]*[]interface{}{}
 
 	for _, option := range defaultOptions {
 		collection = option(collection)
@@ -122,58 +122,70 @@ func connect(connectionType ConnectionType, options ...Option) QueryCollection {
 
 }
 
+func addCustom(key string, value interface{}, customMap *map[string]*[]interface{}) {
+
+	if (*customMap)[key] == nil {
+		(*customMap)[key] = &[]interface{}{value}
+	} else {
+		currentValues := *(*customMap)[key]
+		currentValues = append(currentValues, value)
+		(*customMap)[key] = &currentValues
+	}
+
+}
+
 func WithActive(active bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["active"] = active
+		addCustom("active", active, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithDeleted(deleted bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["deleted"] = deleted
+		addCustom("deleted", deleted, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithShippable(shippable bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["shippable"] = shippable
+		addCustom("shippable", shippable, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithId(id string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["id"] = id
+		addCustom("id", id, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithPriceId(priceId string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["default_price.id"] = priceId
+		addCustom("default_price.id", priceId, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithDescription(description string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["description"] = description
+		addCustom("description", description, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithType(t string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["type"] = t
+		addCustom("type", t, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
 
 func WithCurrency(currency string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		stripeQuery.Custom["currency"] = currency
+		addCustom("currency", currency, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
@@ -208,8 +220,7 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 
 func With(key string, value interface{}) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-
-		stripeQuery.Custom[key] = value
+		addCustom(key, value, &stripeQuery.Custom)
 		return stripeQuery
 	}
 }
@@ -270,35 +281,7 @@ func (stripeQuery *StripeQuery) String() string {
 	queryStrings := []string{}
 
 	for _, collection := range *&stripeQuery.Collections {
-
-		var queries []string
-
-		if collection.Metadata != nil {
-
-			for key, value := range *collection.Metadata {
-				queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
-			}
-
-		}
-
-		for key, value := range collection.Custom {
-			queries = append(queries, fmt.Sprintf("%s:'%v'", key, value))
-		}
-
-		if collection.RawStrings != nil {
-			queries = append(queries, *collection.RawStrings...)
-		}
-
-		if collection.Entries != nil {
-
-			for _, entry := range *collection.Entries {
-				queries = append(queries, entry.String())
-			}
-
-		}
-
-		queryStrings = append(queryStrings, fmt.Sprintf("(%s)", strings.Join(queries, fmt.Sprintf(" %s ", collection.ConnectionType.String()))))
-
+		queryStrings = append(queryStrings, collection.String())
 	}
 
 	return strings.Join(queryStrings, fmt.Sprintf(" %s ", stripeQuery.ConnectionType))
@@ -317,8 +300,16 @@ func (collection *QueryCollection) String() string {
 
 	}
 
-	for key, value := range collection.Custom {
-		queries = append(queries, fmt.Sprintf("%s:'%v'", key, value))
+	for key, values := range collection.Custom {
+
+		valueQueries := []string{}
+
+		for _, value := range *values {
+			valueQueries = append(valueQueries, fmt.Sprintf("%s:'%v'", key, value))
+		}
+
+		queries = append(queries, strings.Join(valueQueries, fmt.Sprintf(" %s ", EnumConnectionType.Or.String())))
+
 	}
 
 	if collection.RawStrings != nil {
