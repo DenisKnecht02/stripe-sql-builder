@@ -7,19 +7,16 @@ import (
 )
 
 type StripeQuery struct {
-	ID          *string
-	Active      *bool
-	Deleted     *bool
-	Shippable   *bool
-	Metadata    *map[string]string
-	Created     *int
-	Description *string
-	Type        *string
-	Currency    *string
-	PriceId     *string
-	Custom      *map[string]interface{}
-	Raw         *[]string
-	RawEntries  *[]QueryEntry[interface{}]
+	ConnectionType ConnectionType
+	Collections    []QueryCollection
+}
+
+type QueryCollection struct {
+	ConnectionType ConnectionType
+	Custom         map[string]interface{}
+	Metadata       *map[string]string
+	Entries        *[]QueryEntry[interface{}]
+	RawStrings     *[]string
 }
 
 type QueryEntry[T interface{}] struct {
@@ -28,89 +25,7 @@ type QueryEntry[T interface{}] struct {
 	Value    T
 }
 
-func (entry *QueryEntry[T]) String() string {
-	if entry.Operator == EnumOperator.NotEqual {
-		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Equals.Operator(), entry.Value)
-	} else if entry.Operator == EnumOperator.NotLike {
-		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Like.Operator(), entry.Value)
-	} else {
-		return fmt.Sprintf("%s%s'%v'", entry.Key, entry.Operator.Operator(), entry.Value)
-	}
-}
-
-func (stripeQuery *StripeQuery) String() string {
-
-	var queries []string
-
-	if stripeQuery.ID != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%s'", "id", *stripeQuery.ID))
-	}
-
-	if stripeQuery.Active != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%t'", "active", *stripeQuery.Active))
-	}
-
-	if stripeQuery.Deleted != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%t'", "deleted", *stripeQuery.Deleted))
-	}
-
-	if stripeQuery.Shippable != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%t'", "shippable", *stripeQuery.Shippable))
-	}
-
-	if stripeQuery.Created != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%d'", "created", *stripeQuery.Created))
-	}
-
-	if stripeQuery.Description != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%s'", "description", *stripeQuery.Description))
-	}
-
-	if stripeQuery.Type != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%s'", "type", *stripeQuery.Type))
-	}
-
-	if stripeQuery.Currency != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%s'", "currency", *stripeQuery.Currency))
-	}
-
-	if stripeQuery.PriceId != nil {
-		queries = append(queries, fmt.Sprintf("%s:'%s'", "default_price.id", *stripeQuery.PriceId))
-	}
-
-	if stripeQuery.Metadata != nil {
-
-		for key, value := range *stripeQuery.Metadata {
-			queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
-		}
-
-	}
-
-	if stripeQuery.Custom != nil {
-
-		for key, value := range *stripeQuery.Custom {
-			queries = append(queries, fmt.Sprintf("%s:'%v'", key, value))
-		}
-
-	}
-
-	if stripeQuery.Raw != nil {
-		queries = append(queries, *stripeQuery.Raw...)
-	}
-
-	if stripeQuery.RawEntries != nil {
-
-		for _, entry := range *stripeQuery.RawEntries {
-			queries = append(queries, entry.String())
-		}
-
-	}
-
-	return strings.Join(queries, " AND ")
-
-}
-
-type Option func(StripeQuery) StripeQuery
+type Option func(QueryCollection) QueryCollection
 
 var defaultOptions []Option = []Option{}
 
@@ -126,107 +41,145 @@ func SetDefaultQueryOptions(options ...Option) {
 	defaultOptions = options
 }
 
-func CreateDefaultQuery() StripeQuery {
+func CreateDefaultCollection(connectionType ConnectionType) QueryCollection {
 
-	var query StripeQuery
+	var collection QueryCollection
+	collection.ConnectionType = connectionType
+	collection.Custom = map[string]interface{}{}
 
 	for _, option := range defaultOptions {
-		query = option(query)
+		collection = option(collection)
 	}
+
+	return collection
+
+}
+
+func Options(options ...Option) []Option {
+	return options
+}
+
+func NewQuery(connectionType ConnectionType, collections ...QueryCollection) StripeQuery {
+
+	query := StripeQuery{
+		ConnectionType: connectionType,
+		Collections:    collections,
+	}
+
+	return query
+}
+
+func NewAndQuery(options ...Option) StripeQuery {
+
+	var query StripeQuery = StripeQuery{}
+	query.Collections = append(query.Collections, And(options...))
 
 	return query
 
 }
 
-func NewQuery(options ...Option) StripeQuery {
+func NewOrQuery(options ...Option) StripeQuery {
 
-	query := CreateDefaultQuery()
-
-	for _, option := range options {
-		query = option(query)
-	}
+	var query StripeQuery = StripeQuery{}
+	query.Collections = append(query.Collections, Or(options...))
 
 	return query
 
 }
 
-func NewStringQuery(options ...Option) string {
-
-	query := CreateDefaultQuery()
-
-	for _, option := range options {
-		query = option(query)
-	}
-
+func NewStringQuery(connectionType ConnectionType, collections ...QueryCollection) string {
+	query := NewQuery(connectionType, collections...)
 	return query.String()
+}
+
+func NewAndStringQuery(options ...Option) string {
+	query := NewAndQuery(options...)
+	return query.String()
+}
+
+func NewOrStringQuery(options ...Option) string {
+	query := NewOrQuery(options...)
+	return query.String()
+}
+
+func And(options ...Option) QueryCollection {
+	return connect(EnumConnectionType.And, options...)
+}
+
+func Or(options ...Option) QueryCollection {
+	return connect(EnumConnectionType.Or, options...)
+}
+
+func connect(connectionType ConnectionType, options ...Option) QueryCollection {
+
+	collection := CreateDefaultCollection(connectionType)
+
+	for _, option := range options {
+		collection = option(collection)
+	}
+
+	return collection
 
 }
 
 func WithActive(active bool) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Active = &active
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["active"] = active
 		return stripeQuery
 	}
 }
 
 func WithDeleted(deleted bool) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Deleted = &deleted
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["deleted"] = deleted
 		return stripeQuery
 	}
 }
 
 func WithShippable(shippable bool) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Shippable = &shippable
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["shippable"] = shippable
 		return stripeQuery
 	}
 }
 
 func WithId(id string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.ID = &id
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["id"] = id
 		return stripeQuery
 	}
 }
 
 func WithPriceId(priceId string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.PriceId = &priceId
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["default_price.id"] = priceId
 		return stripeQuery
 	}
 }
 
 func WithDescription(description string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Description = &description
-		return stripeQuery
-	}
-}
-
-func WithCreated(created int) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Created = &created
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["description"] = description
 		return stripeQuery
 	}
 }
 
 func WithType(t string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Type = &t
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["type"] = t
 		return stripeQuery
 	}
 }
 
 func WithCurrency(currency string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
-		stripeQuery.Currency = &currency
+	return func(stripeQuery QueryCollection) QueryCollection {
+		stripeQuery.Custom["currency"] = currency
 		return stripeQuery
 	}
 }
 
 func WithMetadata(key string, value string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
+	return func(stripeQuery QueryCollection) QueryCollection {
 
 		if stripeQuery.Metadata == nil {
 			stripeQuery.Metadata = &map[string]string{}
@@ -239,7 +192,7 @@ func WithMetadata(key string, value string) Option {
 }
 
 func WithMetadataMap(metadataMap map[string]string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
+	return func(stripeQuery QueryCollection) QueryCollection {
 
 		if stripeQuery.Metadata == nil {
 			stripeQuery.Metadata = &map[string]string{}
@@ -253,38 +206,34 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 	}
 }
 
-func WithCustom(key string, value string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
+func With(key string, value string) Option {
+	return func(stripeQuery QueryCollection) QueryCollection {
 
-		if stripeQuery.Custom == nil {
-			stripeQuery.Custom = &map[string]interface{}{}
-		}
-
-		(*stripeQuery.Custom)[key] = value
+		stripeQuery.Custom[key] = value
 		return stripeQuery
 	}
 }
 
 func WithRawString(raw string) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
+	return func(stripeQuery QueryCollection) QueryCollection {
 
 		rawValues := []string{}
-		if stripeQuery.Raw != nil {
-			rawValues = *stripeQuery.Raw
+		if stripeQuery.RawStrings != nil {
+			rawValues = *stripeQuery.RawStrings
 		}
 
 		rawValues = append(rawValues, raw)
-		stripeQuery.Raw = &rawValues
+		stripeQuery.RawStrings = &rawValues
 		return stripeQuery
 	}
 }
 
-func WithRawEntry(key string, operator Operator, value interface{}) Option {
-	return func(stripeQuery StripeQuery) StripeQuery {
+func WithEntry(key string, operator Operator, value interface{}) Option {
+	return func(stripeQuery QueryCollection) QueryCollection {
 
 		rawValues := []QueryEntry[interface{}]{}
-		if stripeQuery.Raw != nil {
-			rawValues = *stripeQuery.RawEntries
+		if stripeQuery.Entries != nil {
+			rawValues = *stripeQuery.Entries
 		}
 
 		entry := QueryEntry[interface{}]{
@@ -294,9 +243,13 @@ func WithRawEntry(key string, operator Operator, value interface{}) Option {
 		}
 
 		rawValues = append(rawValues, entry)
-		stripeQuery.RawEntries = &rawValues
+		stripeQuery.Entries = &rawValues
 		return stripeQuery
 	}
+}
+
+func WithIsNull(key string) Option {
+	return WithEntry(key, EnumOperator.Equals, "null")
 }
 
 func Bool(b bool) *bool {
@@ -308,6 +261,132 @@ func String(s string) *string {
 }
 
 var ErrorParseOperator error = errors.New("INVALID_OPERATOR")
+var ErrorParseConnectionType error = errors.New("INVALID_CONNECTION_TYPE")
+
+/* String Methods */
+
+func (stripeQuery *StripeQuery) String() string {
+
+	queryStrings := []string{}
+
+	for _, collection := range *&stripeQuery.Collections {
+
+		var queries []string
+
+		if collection.Metadata != nil {
+
+			for key, value := range *collection.Metadata {
+				queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
+			}
+
+		}
+
+		for key, value := range collection.Custom {
+			queries = append(queries, fmt.Sprintf("%s:'%v'", key, value))
+		}
+
+		if collection.RawStrings != nil {
+			queries = append(queries, *collection.RawStrings...)
+		}
+
+		if collection.Entries != nil {
+
+			for _, entry := range *collection.Entries {
+				queries = append(queries, entry.String())
+			}
+
+		}
+
+		queryStrings = append(queryStrings, fmt.Sprintf("(%s)", strings.Join(queries, fmt.Sprintf(" %s ", collection.ConnectionType.String()))))
+
+	}
+
+	return strings.Join(queryStrings, fmt.Sprintf(" %s ", stripeQuery.ConnectionType))
+
+}
+
+func (collection *QueryCollection) String() string {
+
+	var queries []string
+
+	if collection.Metadata != nil {
+
+		for key, value := range *collection.Metadata {
+			queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
+		}
+
+	}
+
+	for key, value := range collection.Custom {
+		queries = append(queries, fmt.Sprintf("%s:'%v'", key, value))
+	}
+
+	if collection.RawStrings != nil {
+		queries = append(queries, *collection.RawStrings...)
+	}
+
+	if collection.Entries != nil {
+
+		for _, entry := range *collection.Entries {
+			queries = append(queries, entry.String())
+		}
+
+	}
+
+	return fmt.Sprintf("(%s)", strings.Join(queries, fmt.Sprintf(" %s ", collection.ConnectionType.String())))
+
+}
+
+func (entry *QueryEntry[T]) String() string {
+	if entry.Operator == EnumOperator.NotEqual {
+		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Equals.Operator(), entry.Value)
+	} else if entry.Operator == EnumOperator.NotLike {
+		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Like.Operator(), entry.Value)
+	} else {
+		return fmt.Sprintf("%s%s'%v'", entry.Key, entry.Operator.Operator(), entry.Value)
+	}
+}
+
+/* Enum: Connection Type */
+
+type ConnectionType string
+
+type connectionTypeList struct {
+	Unknown ConnectionType
+	And     ConnectionType
+	Or      ConnectionType
+}
+
+var EnumConnectionType = &connectionTypeList{
+	Unknown: "UNKNOWN",
+	And:     "AND",
+	Or:      "OR",
+}
+
+var connectionTypeMap = map[string]ConnectionType{
+	"UNKNOWN": EnumConnectionType.Unknown,
+	"AND":     EnumConnectionType.And,
+	"OR":      EnumConnectionType.Or,
+}
+
+func ParseStringToConnectionType(str string) (ConnectionType, error) {
+	connectionType, ok := connectionTypeMap[strings.ToLower(str)]
+	if ok {
+		return connectionType, nil
+	} else {
+		return connectionType, ErrorParseConnectionType
+	}
+}
+
+func (connectionType ConnectionType) String() string {
+	switch connectionType {
+	case EnumConnectionType.And:
+		return "AND"
+	case EnumConnectionType.Or:
+		return "OR"
+	}
+	return "UNKNOWN"
+}
 
 /* Enum: Operator */
 
