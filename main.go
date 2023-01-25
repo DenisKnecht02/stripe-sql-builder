@@ -122,13 +122,13 @@ func connect(connectionType ConnectionType, options ...Option) QueryCollection {
 
 }
 
-func addCustom(key string, value interface{}, customMap *map[string]*[]interface{}) {
+func addCustom(customMap *map[string]*[]interface{}, key string, values ...interface{}) {
 
 	if (*customMap)[key] == nil {
-		(*customMap)[key] = &[]interface{}{value}
+		(*customMap)[key] = &values
 	} else {
 		currentValues := *(*customMap)[key]
-		currentValues = append(currentValues, value)
+		currentValues = append(currentValues, values...)
 		(*customMap)[key] = &currentValues
 	}
 
@@ -136,56 +136,63 @@ func addCustom(key string, value interface{}, customMap *map[string]*[]interface
 
 func WithActive(active bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("active", active, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "active", active)
 		return stripeQuery
 	}
 }
 
 func WithDeleted(deleted bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("deleted", deleted, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "deleted", deleted)
 		return stripeQuery
 	}
 }
 
 func WithShippable(shippable bool) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("shippable", shippable, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "shippable", shippable)
 		return stripeQuery
 	}
 }
 
 func WithId(id string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("id", id, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "id", id)
+		return stripeQuery
+	}
+}
+
+func WithIds(ids ...string) Option {
+	return func(stripeQuery QueryCollection) QueryCollection {
+		addCustom(&stripeQuery.Custom, "id", convertSlice(&ids)...)
 		return stripeQuery
 	}
 }
 
 func WithPriceId(priceId string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("default_price.id", priceId, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "default_price.id", priceId)
 		return stripeQuery
 	}
 }
 
 func WithDescription(description string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("description", description, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "description", description)
 		return stripeQuery
 	}
 }
 
 func WithType(t string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("type", t, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "type", t)
 		return stripeQuery
 	}
 }
 
 func WithCurrency(currency string) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom("currency", currency, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, "currency", currency)
 		return stripeQuery
 	}
 }
@@ -218,9 +225,9 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 	}
 }
 
-func With(key string, value interface{}) Option {
+func With(key string, values ...interface{}) Option {
 	return func(stripeQuery QueryCollection) QueryCollection {
-		addCustom(key, value, &stripeQuery.Custom)
+		addCustom(&stripeQuery.Custom, key, values...)
 		return stripeQuery
 	}
 }
@@ -273,6 +280,17 @@ func String(s string) *string {
 
 var ErrorParseOperator error = errors.New("INVALID_OPERATOR")
 var ErrorParseConnectionType error = errors.New("INVALID_CONNECTION_TYPE")
+
+func convertSlice[T interface{}](slice *[]T) []interface{} {
+
+	var interfaceSlice []interface{}
+	for _, s := range *slice {
+		interfaceSlice = append(interfaceSlice, s)
+	}
+
+	return interfaceSlice
+
+}
 
 /* String Methods */
 
