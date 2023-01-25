@@ -8,11 +8,6 @@ import (
 
 type StripeQuery struct {
 	ConnectionType ConnectionType
-	Collections    []QueryCollection
-}
-
-type QueryCollection struct {
-	ConnectionType ConnectionType
 	Custom         map[string]*[]interface{}
 	Metadata       *map[string]string
 	Entries        *[]QueryEntry[interface{}]
@@ -25,7 +20,7 @@ type QueryEntry[T interface{}] struct {
 	Value    T
 }
 
-type Option func(QueryCollection) QueryCollection
+type Option func(StripeQuery) StripeQuery
 
 var defaultOptions []Option = []Option{}
 
@@ -41,54 +36,41 @@ func SetDefaultQueryOptions(options ...Option) {
 	defaultOptions = options
 }
 
-func CreateDefaultCollection(connectionType ConnectionType) QueryCollection {
+func CreateDefaultQuery(connectionType ConnectionType) StripeQuery {
 
-	var collection QueryCollection
-	collection.ConnectionType = connectionType
-	collection.Custom = map[string]*[]interface{}{}
+	var query StripeQuery
+	query.ConnectionType = connectionType
+	query.Custom = map[string]*[]interface{}{}
 
 	for _, option := range defaultOptions {
-		collection = option(collection)
+		query = option(query)
 	}
 
-	return collection
+	return query
 
 }
 
-func Options(options ...Option) []Option {
-	return options
-}
+func NewQuery(connectionType ConnectionType, options ...Option) StripeQuery {
 
-func NewQuery(connectionType ConnectionType, collections ...QueryCollection) StripeQuery {
+	var query StripeQuery = CreateDefaultQuery(connectionType)
 
-	query := StripeQuery{
-		ConnectionType: connectionType,
-		Collections:    collections,
+	for _, option := range options {
+		query = option(query)
 	}
 
 	return query
 }
 
 func NewAndQuery(options ...Option) StripeQuery {
-
-	var query StripeQuery = StripeQuery{}
-	query.Collections = append(query.Collections, And(options...))
-
-	return query
-
+	return NewQuery(EnumConnectionType.And, options...)
 }
 
 func NewOrQuery(options ...Option) StripeQuery {
-
-	var query StripeQuery = StripeQuery{}
-	query.Collections = append(query.Collections, Or(options...))
-
-	return query
-
+	return NewQuery(EnumConnectionType.Or, options...)
 }
 
-func NewStringQuery(connectionType ConnectionType, collections ...QueryCollection) string {
-	query := NewQuery(connectionType, collections...)
+func NewStringQuery(connectionType ConnectionType, options ...Option) string {
+	query := NewQuery(connectionType, options...)
 	return query.String()
 }
 
@@ -100,26 +82,6 @@ func NewAndStringQuery(options ...Option) string {
 func NewOrStringQuery(options ...Option) string {
 	query := NewOrQuery(options...)
 	return query.String()
-}
-
-func And(options ...Option) QueryCollection {
-	return connect(EnumConnectionType.And, options...)
-}
-
-func Or(options ...Option) QueryCollection {
-	return connect(EnumConnectionType.Or, options...)
-}
-
-func connect(connectionType ConnectionType, options ...Option) QueryCollection {
-
-	collection := CreateDefaultCollection(connectionType)
-
-	for _, option := range options {
-		collection = option(collection)
-	}
-
-	return collection
-
 }
 
 func addCustom(customMap *map[string]*[]interface{}, key string, values ...interface{}) {
@@ -135,70 +97,70 @@ func addCustom(customMap *map[string]*[]interface{}, key string, values ...inter
 }
 
 func WithActive(active bool) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "active", active)
 		return stripeQuery
 	}
 }
 
 func WithDeleted(deleted bool) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "deleted", deleted)
 		return stripeQuery
 	}
 }
 
 func WithShippable(shippable bool) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "shippable", shippable)
 		return stripeQuery
 	}
 }
 
 func WithId(id string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "id", id)
 		return stripeQuery
 	}
 }
 
 func WithIds(ids ...string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "id", convertSlice(&ids)...)
 		return stripeQuery
 	}
 }
 
 func WithPriceId(priceId string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "default_price.id", priceId)
 		return stripeQuery
 	}
 }
 
 func WithDescription(description string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "description", description)
 		return stripeQuery
 	}
 }
 
 func WithType(t string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "type", t)
 		return stripeQuery
 	}
 }
 
 func WithCurrency(currency string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "currency", currency)
 		return stripeQuery
 	}
 }
 
 func WithMetadata(key string, value string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 
 		if stripeQuery.Metadata == nil {
 			stripeQuery.Metadata = &map[string]string{}
@@ -211,7 +173,7 @@ func WithMetadata(key string, value string) Option {
 }
 
 func WithMetadataMap(metadataMap map[string]string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 
 		if stripeQuery.Metadata == nil {
 			stripeQuery.Metadata = &map[string]string{}
@@ -226,14 +188,14 @@ func WithMetadataMap(metadataMap map[string]string) Option {
 }
 
 func With(key string, values ...interface{}) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, key, values...)
 		return stripeQuery
 	}
 }
 
 func WithRawString(raw string) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 
 		rawValues := []string{}
 		if stripeQuery.RawStrings != nil {
@@ -247,7 +209,7 @@ func WithRawString(raw string) Option {
 }
 
 func WithEntry(key string, operator Operator, value interface{}) Option {
-	return func(stripeQuery QueryCollection) QueryCollection {
+	return func(stripeQuery StripeQuery) StripeQuery {
 
 		rawValues := []QueryEntry[interface{}]{}
 		if stripeQuery.Entries != nil {
@@ -296,29 +258,17 @@ func convertSlice[T interface{}](slice *[]T) []interface{} {
 
 func (stripeQuery *StripeQuery) String() string {
 
-	queryStrings := []string{}
-
-	for _, collection := range *&stripeQuery.Collections {
-		queryStrings = append(queryStrings, collection.String())
-	}
-
-	return strings.Join(queryStrings, fmt.Sprintf(" %s ", stripeQuery.ConnectionType))
-
-}
-
-func (collection *QueryCollection) String() string {
-
 	var queries []string
 
-	if collection.Metadata != nil {
+	if stripeQuery.Metadata != nil {
 
-		for key, value := range *collection.Metadata {
+		for key, value := range *stripeQuery.Metadata {
 			queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
 		}
 
 	}
 
-	for key, values := range collection.Custom {
+	for key, values := range stripeQuery.Custom {
 
 		valueQueries := []string{}
 
@@ -326,28 +276,28 @@ func (collection *QueryCollection) String() string {
 			valueQueries = append(valueQueries, fmt.Sprintf("%s:'%v'", key, value))
 		}
 
-		queries = append(queries, strings.Join(valueQueries, fmt.Sprintf(" %s ", EnumConnectionType.Or.String())))
+		queries = append(queries, strings.Join(valueQueries, fmt.Sprintf(" %s ", stripeQuery.ConnectionType.String())))
 
 	}
 
-	if collection.RawStrings != nil {
-		queries = append(queries, *collection.RawStrings...)
+	if stripeQuery.RawStrings != nil {
+		queries = append(queries, *stripeQuery.RawStrings...)
 	}
 
-	if collection.Entries != nil {
+	if stripeQuery.Entries != nil {
 
-		for _, entry := range *collection.Entries {
+		for _, entry := range *stripeQuery.Entries {
 			queries = append(queries, entry.String())
 		}
 
 	}
 
-	return fmt.Sprintf("(%s)", strings.Join(queries, fmt.Sprintf(" %s ", collection.ConnectionType.String())))
+	return strings.Join(queries, fmt.Sprintf(" %s ", stripeQuery.ConnectionType.String()))
 
 }
 
 func (entry *QueryEntry[T]) String() string {
-	if entry.Operator == EnumOperator.NotEqual {
+	if entry.Operator == EnumOperator.NotEquals {
 		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Equals.Operator(), entry.Value)
 	} else if entry.Operator == EnumOperator.NotLike {
 		return fmt.Sprintf("%s%s%s'%v'", entry.Operator.Operator(), entry.Key, EnumOperator.Like.Operator(), entry.Value)
@@ -408,7 +358,7 @@ type operatorList struct {
 	LessThan         Operator
 	GreaterEqualThan Operator
 	LessEqualThan    Operator
-	NotEqual         Operator
+	NotEquals        Operator
 	Like             Operator
 	NotLike          Operator
 }
@@ -420,7 +370,7 @@ var EnumOperator = &operatorList{
 	LessThan:         "less_than",
 	GreaterEqualThan: "greater_equal_than",
 	LessEqualThan:    "less_equal_than",
-	NotEqual:         "not_equal",
+	NotEquals:        "not_equals",
 	Like:             "like",
 	NotLike:          "not_like",
 }
@@ -432,7 +382,7 @@ var operatorMap = map[string]Operator{
 	"less_than":          EnumOperator.LessThan,
 	"greater_equal_than": EnumOperator.GreaterEqualThan,
 	"less_equal_than":    EnumOperator.LessEqualThan,
-	"not_equal":          EnumOperator.NotEqual,
+	"not_equals":         EnumOperator.NotEquals,
 	"like":               EnumOperator.Like,
 	"not_like":           EnumOperator.NotLike,
 }
@@ -458,8 +408,8 @@ func (operator Operator) String() string {
 		return "greater_equal_than"
 	case EnumOperator.LessEqualThan:
 		return "less_equal_than"
-	case EnumOperator.NotEqual:
-		return "not_equal"
+	case EnumOperator.NotEquals:
+		return "not_equals"
 	case EnumOperator.Like:
 		return "like"
 	case EnumOperator.NotLike:
@@ -480,7 +430,7 @@ func (operator Operator) Operator() string {
 		return ">="
 	case EnumOperator.LessEqualThan:
 		return "<="
-	case EnumOperator.NotEqual:
+	case EnumOperator.NotEquals:
 		return "-"
 	case EnumOperator.Like:
 		return "~"
