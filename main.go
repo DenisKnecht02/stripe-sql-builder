@@ -126,7 +126,7 @@ func WithId(id string) Option {
 
 func WithIds(ids ...string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
-		addCustom(&stripeQuery.Custom, "id", convertSlice(&ids)...)
+		addCustom(&stripeQuery.Custom, "id", ConvertSlice(&ids)...)
 		return stripeQuery
 	}
 }
@@ -243,7 +243,7 @@ func String(s string) *string {
 var ErrorParseOperator error = errors.New("INVALID_OPERATOR")
 var ErrorParseConnectionType error = errors.New("INVALID_CONNECTION_TYPE")
 
-func convertSlice[T interface{}](slice *[]T) []interface{} {
+func ConvertSlice[T interface{}](slice *[]T) []interface{} {
 
 	var interfaceSlice []interface{}
 	for _, s := range *slice {
