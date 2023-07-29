@@ -124,6 +124,13 @@ func WithId(id string) Option {
 	}
 }
 
+func WithCustomer(customerId string) Option {
+	return func(stripeQuery StripeQuery) StripeQuery {
+		addCustom(&stripeQuery.Custom, "customer", customerId)
+		return stripeQuery
+	}
+}
+
 func WithIds(ids ...string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
 		addCustom(&stripeQuery.Custom, "id", ConvertSlice(&ids)...)
