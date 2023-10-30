@@ -14,6 +14,10 @@ type StripeQuery struct {
 	RawStrings     *[]string
 }
 
+func (query *StripeQuery) Append(option Option) {
+	*query = option(*query)
+}
+
 type QueryEntry[T interface{}] struct {
 	Key      string
 	Operator Operator
@@ -37,7 +41,6 @@ func SetDefaultQueryOptions(options ...Option) {
 }
 
 func CreateDefaultQuery(connectionType ConnectionType) StripeQuery {
-
 	var query StripeQuery
 	query.ConnectionType = connectionType
 	query.Custom = map[string]*[]interface{}{}
@@ -47,7 +50,6 @@ func CreateDefaultQuery(connectionType ConnectionType) StripeQuery {
 	}
 
 	return query
-
 }
 
 func NewQuery(connectionType ConnectionType, options ...Option) StripeQuery {
@@ -85,7 +87,6 @@ func NewOrStringQuery(options ...Option) string {
 }
 
 func addCustom(customMap *map[string]*[]interface{}, key string, values ...interface{}) {
-
 	if (*customMap)[key] == nil {
 		(*customMap)[key] = &values
 	} else {
@@ -93,7 +94,6 @@ func addCustom(customMap *map[string]*[]interface{}, key string, values ...inter
 		currentValues = append(currentValues, values...)
 		(*customMap)[key] = &currentValues
 	}
-
 }
 
 func WithActive(active bool) Option {
@@ -168,7 +168,6 @@ func WithCurrency(currency string) Option {
 
 func WithMetadata(key string, value string) Option {
 	return func(stripeQuery StripeQuery) StripeQuery {
-
 		if stripeQuery.Metadata == nil {
 			stripeQuery.Metadata = &map[string]string{}
 		}
@@ -251,32 +250,26 @@ var ErrorParseOperator error = errors.New("INVALID_OPERATOR")
 var ErrorParseConnectionType error = errors.New("INVALID_CONNECTION_TYPE")
 
 func ConvertSlice[T interface{}](slice *[]T) []interface{} {
-
 	var interfaceSlice []interface{}
 	for _, s := range *slice {
 		interfaceSlice = append(interfaceSlice, s)
 	}
 
 	return interfaceSlice
-
 }
 
 /* String Methods */
 
 func (stripeQuery *StripeQuery) String() string {
-
 	var queries []string
 
 	if stripeQuery.Metadata != nil {
-
 		for key, value := range *stripeQuery.Metadata {
 			queries = append(queries, fmt.Sprintf("metadata['%s']:'%s'", key, value))
 		}
-
 	}
 
 	for key, values := range stripeQuery.Custom {
-
 		valueQueries := []string{}
 
 		for _, value := range *values {
@@ -284,7 +277,6 @@ func (stripeQuery *StripeQuery) String() string {
 		}
 
 		queries = append(queries, strings.Join(valueQueries, fmt.Sprintf(" %s ", stripeQuery.ConnectionType.String())))
-
 	}
 
 	if stripeQuery.RawStrings != nil {
@@ -292,15 +284,12 @@ func (stripeQuery *StripeQuery) String() string {
 	}
 
 	if stripeQuery.Entries != nil {
-
 		for _, entry := range *stripeQuery.Entries {
 			queries = append(queries, entry.String())
 		}
-
 	}
 
 	return strings.Join(queries, fmt.Sprintf(" %s ", stripeQuery.ConnectionType.String()))
-
 }
 
 func (entry *QueryEntry[T]) String() string {
